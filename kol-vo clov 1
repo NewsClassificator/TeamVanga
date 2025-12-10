@@ -1,0 +1,85 @@
+import re
+
+def count_syllables_russian(word):
+    """Подсчёт слогов по гласным (а, е, ё, и, о, у, ы, э, ю, я)"""
+    vowels = 'аеёиоуыэюя'
+    return max(1, sum(1 for char in word.lower() if char in vowels))
+
+def analyze_text_russian(text):
+    text = text.strip()
+    if not text:
+        return {
+            "words": 0, "sentences": 0, "syllables": 0,
+            "flesch_index": None, "level": "Пустой текст", "grade": "—"
+        }
+
+    # Предложения: делим по . ? ! с последующей очисткой
+    sentences = re.split(r'[.!?]+', text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    num_sentences = len(sentences)
+
+    # Слова: только кириллица (включая ё)
+    words = re.findall(r'[а-яА-ЯёЁ]+(?:-[а-яА-ЯёЁ]+)*', text)
+    num_words = len(words)
+
+    if num_words == 0:
+        return {
+            "words": 0, "sentences": num_sentences, "syllables": 0,
+            "flesch_index": None, "level": "Нет слов", "grade": "—"
+        }
+
+    total_syllables = sum(count_syllables_russian(word) for word in words)
+
+    # Защита от деления на ноль
+    if num_sentences == 0:
+        num_sentences = 1  # на случай, если в тексте нет знаков препинания
+
+    # Адаптированная формула Флеша для русского языка
+    asl = num_words / num_sentences          # средняя длина предложения (в словах)
+    asw = total_syllables / num_words        # среднее число слогов на слово
+
+    flesch_index = 208.7 - 1.11 * asl - 63.5 * asw
+    flesch_index = max(0.0, min(100.0, round(flesch_index, 2)))  # ограничиваем диапазон
+
+    # Интерпретация индекса (адаптировано под русский)
+    if flesch_index >= 90:
+        level = "очень высокая"
+        grade = "начальная школа (1–4 классы)"
+    elif flesch_index >= 80:
+        level = "высокая"
+        grade = "средняя школа (5–6 классы)"
+    elif flesch_index >= 70:
+        level = "достаточная"
+        grade = "средняя школа (7–8 классы)"
+    elif flesch_index >= 60:
+        level = "средняя"
+        grade = "старшие классы (9–11)"
+    elif flesch_index >= 50:
+        level = "низкая"
+        grade = "студенты"
+    elif flesch_index >= 30:
+        level = "очень низкая"
+        grade = "высшее образование"
+    else:
+        level = "крайне низкая"
+        grade = "научные/технические тексты"
+
+    return {
+        "words": num_words,
+        "sentences": num_sentences,
+        "syllables": total_syllables,
+        "flesch_index": flesch_index,
+        "level": level,
+        "grade": grade
+    }
+
+# Пример использования
+if __name__ == "__main__":
+    text = """
+    Лошадка везла воз хвороста. Был сильный мороз. Крестьянин ехал на базар.
+    """
+
+    res = analyze_text_russian(text)
+    print("🔤 Анализ русского текста:")
+    for k, v in res.items():
+        print(f"{k.capitalize()}: {v}")
