@@ -1,0 +1,93 @@
+import re
+
+def count_syllables_russian(word):
+    """Подсчёт слогов в слове по количеству гласных"""
+    vowels = 'аеёиоуыэюя'
+    return sum(1 for char in word.lower() if char in vowels)
+
+def analyze_text_russian(text):
+    # Удаляем лишние пробелы и нормализуем текст
+    text = text.strip()
+
+    # Подсчёт предложений: разделяем по . ? !
+    sentences = re.split(r'[.!?]+', text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    num_sentences = len(sentences)
+
+    # Подсчёт слов: извлекаем слова (кириллица + дефисы + апострофы)
+    words = re.findall(r'[а-яА-ЯёЁ]+(?:-[а-яА-ЯёЁ]+)*', text)
+    num_words = len(words)
+
+    # Подсчёт слогов
+    total_syllables = sum(count_syllables_russian(word) for word in words)
+
+    # Проверка деления на ноль
+    if num_sentences == 0 or num_words == 0:
+        return {
+            "words": num_words,
+            "sentences": num_sentences,
+            "syllables": total_syllables,
+            "flesch_index": None,
+            "level": "Недостаточно данных",
+            "grade": "—"
+        }
+
+    # Формула Флеша (оригинальная, адаптированная под русский)
+    # Индекс Флеша = 206.835 - 1.3 * (кол-во слов / кол-во предложений) - 60.1 * (кол-во слогов / кол-во слов)
+    flesch_index = 206.835 - 1.3 * (num_words / num_sentences) - 60.1 * (total_syllables / num_words)
+
+    # Округление до 2 знаков
+    flesch_index = round(flesch_index, 2)
+
+    # Определение уровня удобочитаемости
+    if flesch_index >= 90:
+        level = "очень высокий"
+        grade = "5 классов"
+    elif flesch_index >= 80:
+        level = "высокий"
+        grade = "6 классов"
+    elif flesch_index >= 70:
+        level = "выше среднего"
+        grade = "7 классов"
+    elif flesch_index >= 60:
+        level = "средний"
+        grade = "8–9 классов"
+    elif flesch_index >= 50:
+        level = "ниже среднего"
+        grade = "10–12 классов"
+    elif flesch_index >= 30:
+        level = "низкий"
+        grade = "вуз"
+    else:
+        level = "очень низкий"
+        grade = "выпускник вуза"
+
+    return {
+        "words": num_words,
+        "sentences": num_sentences,
+        "syllables": total_syllables,
+        "flesch_index": flesch_index,
+        "level": level,
+        "grade": grade
+    }
+
+# Пример использования
+if __name__ == "__main__":
+    sample_text = """
+    Однажды в студёную зимнюю пору
+    Я из лесу вышел; был сильный мороз.
+    Гляжу, поднимается медленно в гору
+    Лошадка, везущая хвороста воз.
+    Зима. Крестьянин, торопясь на базар,
+    На белой лошадке скакал на базар.
+    """
+
+    result = analyze_text_russian(sample_text)
+
+    print("📊 Результат анализа текста:")
+    print(f"Слов: {result['words']}")
+    print(f"Предложений: {result['sentences']}")
+    print(f"Слогов: {result['syllables']}")
+    print(f"Индекс Флеша: {result['flesch_index']}")
+    print(f"Уровень удобочитаемости: {result['level']}")
+    print(f"Рекомендуемый уровень образования: {result['grade']}")
